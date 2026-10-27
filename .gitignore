@@ -1,0 +1,20 @@
+# Never commit secrets. The service_role key bypasses every RLS policy in the
+# project -- anyone holding it owns the database outright.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Build output and local tooling
+node_modules/
+dist/
+.wrangler/
+.vscode/
+__pycache__/
+*.pyc
+
+# Scratch
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SoloLeveling Dashboard</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232d6cdf'/%3E%3Cpath d='M9 20l5-9 4 6 2-3 3 6z' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+/* Same chrome as the _brewedops and _db dashboards -- this is a wing of those, not
+   a separate product. Light is the base because those two are light; dark is the
+   alternative rather than the other way round. */
+:root{
+  --e:cubic-bezier(.23,1,.32,1); --out:cubic-bezier(.23,1,.32,1);
+  --ink:#0e1420; --dim:#667085; --faint:#98a2b3; --line:#e4e9f0; --line2:#eef2f7;
+  --paper:#ffffff; --wash:#f6f8fb; --accent:#2d6cdf; --accent-ink:#ffffff;
+  --accent-soft:#eaf1fe; --accent-dark:#2560c8; --well:#F2F5FA;
+  --good:#2f8f3e; --warn:#b26a12; --bad:#c0504d;
+  --lift:0 8px 26px -18px rgba(16,32,64,.4);
+  color-scheme:light;
+}
+/* The neon accents from the dark dashboards are replaced, not reused: #7ee8f7 on
+   #15151c is right and on #ffffff is unreadable. A theme that keeps one palette's
+   accents is the usual way this gets half-done. */
+:root[data-theme="dark"]{
+  --ink:#f0f0f5; --dim:#8a8a9e; --faint:#6e6e82; --line:#262633; --line2:#1f1f29;
+  --paper:#15151c; --wash:#0c0c10; --accent:#7ee8f7; --accent-ink:#06161a;
+  --accent-soft:#16303a; --accent-dark:#9cf0fb; --well:#0f0f15;
+  --good:#49d18a; --warn:#ffb86b; --bad:#ff6b8a;
+  --lift:0 8px 26px -18px rgba(0,0,0,.8);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ink:#f0f0f5; --dim:#8a8a9e; --faint:#6e6e82; --line:#262633; --line2:#1f1f29;
+    --paper:#15151c; --wash:#0c0c10; --accent:#7ee8f7; --accent-ink:#06161a;
+    --accent-soft:#16303a; --accent-dark:#9cf0fb; --well:#0f0f15;
+    --good:#49d18a; --warn:#ffb86b; --bad:#ff6b8a;
+    --lift:0 8px 26px -18px rgba(0,0,0,.8);
+    color-scheme:dark;
+  }
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--wash);color:var(--ink);min-height:100svh;
+  font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;display:grid;grid-template-columns:252px 1fr}
+@media(max-width:900px){
+  body{grid-template-columns:1fr}
+  aside{position:static!important;height:auto!important;border-right:0!important;
+    border-bottom:1px solid var(--line)}
+}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+
+/* ---------- sidebar ---------- */
+aside{position:sticky;top:0;height:100svh;overflow-y:auto;background:var(--paper);
+  border-right:1px solid var(--line);padding:16px 12px;display:flex;
+  flex-direction:column;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;padding:4px 6px 0}
+.brand i{width:26px;height:26px;border-radius:7px;background:var(--accent);flex:none;
+  display:grid;place-items:center}
+.brand i svg{width:16px;height:16px;fill:none;stroke:var(--accent-ink);stroke-width:2.6;
+  stroke-linecap:round;stroke-linejoin:round}
+.brand b{font-size:14.5px;letter-spacing:-.01em;display:block;line-height:1.2}
+.brand span{font-size:11px;color:var(--faint);display:block}
+
+.find{position:relative;display:flex;align-items:center}
+.find svg{position:absolute;left:10px;width:14px;height:14px;fill:none;
+  stroke:var(--faint);stroke-width:1.7}
+#q{width:100%;min-height:36px;padding:0 30px 0 31px;border-radius:9px;
+  border:1px solid var(--line);background:var(--wash);color:var(--ink);font:inherit;
+  font-size:13px}
+#q:focus{outline:none;border-color:var(--accent);background:var(--paper)}
+.find kbd{position:absolute;right:9px;font:600 10px ui-monospace,Menlo,Consolas,monospace;
+  color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 4px}
+
+.grp{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  padding:12px 8px 5px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  padding:7px 9px;border:0;border-radius:8px;background:transparent;cursor:pointer;
+  font:inherit;font-size:13px;color:var(--ink);text-align:left;
+  transition:background .14s var(--out),color .14s var(--out)}
+.nav b{font:600 11px ui-sans-serif,system-ui,sans-serif;color:var(--faint);flex:none}
+.nav span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav:hover{background:var(--wash)}
+.nav[aria-current="true"]{background:var(--accent-soft);color:var(--accent)}
+.nav[aria-current="true"] b{color:var(--accent)}
+
+.tally{margin-top:auto;font-size:11px;color:var(--faint);background:var(--wash);
+  border-radius:8px;padding:9px 10px;line-height:1.5}
+.tally b{color:var(--accent)}
+.acct{display:flex;align-items:center;gap:7px;margin-top:8px;padding:9px 10px;
+  border-radius:8px;border:1px dashed var(--line);font-size:10.5px;color:var(--dim)}
+.acct .em{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--ink);font-size:11px}
+.role{font:600 9px ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;
+  letter-spacing:.06em;border-radius:4px;padding:2px 5px;border:1px solid var(--line);
+  color:var(--faint);background:var(--paper);flex:none}
+.role.admin{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+
+/* ---------- main ---------- */
+main{padding:clamp(16px,2.4vw,30px);min-width:0}
+.head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:4px}
+h1{font-size:23px;letter-spacing:-.025em;display:flex;align-items:center;gap:10px}
+h1 em{font-style:normal;font:600 12px ui-sans-serif,system-ui,sans-serif;
+  color:var(--faint);background:var(--wash);border:1px solid var(--line);
+  border-radius:999px;padding:3px 9px}
+.sub{color:var(--dim);font-size:13.5px;margin-bottom:16px;max-width:70ch}
+.tools{margin-left:auto;display:flex;gap:7px}
+.btn{appearance:none;cursor:pointer;border:1px solid var(--line);background:var(--paper);
+  color:var(--ink);border-radius:9px;padding:0 12px;min-height:34px;
+  font:600 12.5px ui-sans-serif,system-ui,sans-serif;display:inline-flex;
+  align-items:center;gap:7px;transition:border-color .14s var(--out),color .14s var(--out)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- grid ---------- */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(262px,1fr))}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:13px;
+  overflow:hidden;display:flex;flex-direction:column;
+  transition:border-color .18s var(--out),box-shadow .18s var(--out),transform .18s var(--out)}
+.card:hover{border-color:color-mix(in oklab,var(--accent) 38%,var(--line));
+  box-shadow:var(--lift);transform:translateY(-2px)}
+
+.well{position:relative;aspect-ratio:4/3;background:var(--well);overflow:hidden;
+  border-bottom:1px solid var(--line2);display:grid;place-items:center;padding:12px;
+  cursor:zoom-in}
+.well .play{position:absolute;right:8px;top:8px;z-index:2;display:flex;align-items:center;
+  gap:5px;height:26px;padding:0 9px;border-radius:7px;background:var(--paper);
+  border:1px solid var(--line);font:600 10.5px ui-sans-serif,system-ui,sans-serif;
+  color:var(--dim);opacity:0;transition:opacity .15s var(--out)}
+.card:hover .play,.well:focus-visible .play{opacity:1}
+.well .play svg{width:11px;height:11px;fill:currentColor;stroke:none}
+.well > .sketch{width:100%}
+.well img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  object-position:top center;opacity:0;transition:opacity .3s var(--out)}
+.well img.in{opacity:1}
+.well .ph{font:500 11.5px ui-sans-serif,system-ui,sans-serif;color:var(--faint);
+  text-align:center;max-width:22ch}
+
+.meta{padding:11px 13px 0;flex:1}
+.meta h3{font:600 13.5px ui-sans-serif,system-ui,sans-serif;letter-spacing:-.01em;
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.meta p{font-size:12px;color:var(--dim);margin-top:2px;line-height:1.45}
+.lib{font:600 9.5px ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;
+  letter-spacing:.06em;border-radius:4px;padding:2px 5px;border:1px solid var(--line);
+  color:var(--faint);background:var(--wash);flex:none}
+.lib.three{color:#7a4bd0;border-color:#e2d6f6;background:#f7f2ff}
+.lib.gsap{color:#2f8f3e;border-color:#cfe8d3;background:#f1faf2}
+.lib.lenis{color:#b26a12;border-color:#f0dfc4;background:#fdf7ee}
+:root[data-theme="dark"] .lib.three{color:#b79cf0;border-color:#36284d;background:#1d1830}
+:root[data-theme="dark"] .lib.gsap{color:#7fd894;border-color:#203a28;background:#13241a}
+:root[data-theme="dark"] .lib.lenis{color:#ecb878;border-color:#3d2e1a;background:#241c11}
+
+.acts{display:flex;gap:7px;padding:11px 13px 13px}
+.acts button{flex:1}
+.bp,.bc{appearance:none;cursor:pointer;border-radius:8px;min-height:32px;padding:0 12px;
+  font:600 11.5px ui-sans-serif,system-ui,sans-serif;display:inline-flex;
+  align-items:center;justify-content:center;gap:6px;
+  transition:background .14s var(--out),border-color .14s var(--out)}
+.bp svg,.bc svg{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.bp{border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.bp:hover:not(:disabled){border-color:var(--accent);background:var(--wash)}
+.bc{border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+.bc:hover:not(:disabled){background:var(--accent-dark);border-color:var(--accent-dark)}
+.bp.ok,.bc.ok{border-color:var(--good);background:var(--good);color:#fff}
+.bp.bad,.bc.bad{border-color:var(--bad);background:var(--bad);color:#fff}
+.bp:disabled,.bc:disabled{opacity:.6;cursor:default}
+
+.licence{font-size:10.5px;color:var(--faint);padding:0 13px 11px;display:flex;gap:6px;
+  align-items:flex-start;line-height:1.4}
+.licence .dot{width:5px;height:5px;border-radius:50%;flex:none;margin-top:4px;
+  background:var(--good)}
+.licence.cond .dot{background:var(--warn)}
+
+.empty{padding:40px 0;color:var(--faint);font-size:13.5px;grid-column:1/-1}
+.empty b{color:var(--ink)}
+.more{grid-column:1/-1;text-align:center;color:var(--faint);font-size:12.5px;padding:8px}
+
+/* ---------- admin ---------- */
+#admin{background:var(--paper);border:1px solid var(--line);border-radius:13px;
+  padding:14px 16px;margin-bottom:18px}
+#admin h2{font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:var(--faint);font-weight:500;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:0 10px 7px 0;
+  border-bottom:1px solid var(--line)}
+td{padding:8px 10px 8px 0;border-bottom:1px solid var(--line2);color:var(--dim)}
+td.k{color:var(--ink);font-weight:500}
+tbody tr:last-child td{border-bottom:0}
+
+/* ---------- login ---------- */
+#gate{position:fixed;inset:0;z-index:100;background:var(--wash);display:grid;
+  place-items:center;padding:24px}
+.sheet{width:100%;max-width:372px;background:var(--paper);border:1px solid var(--line);
+  border-radius:15px;padding:28px 26px 24px;box-shadow:0 30px 80px -40px rgba(10,20,40,.4)}
+.sheet .brand{padding:0 0 16px}
+.sheet h1{font-size:19px;margin-bottom:4px;display:block}
+.sheet .lede{color:var(--dim);font-size:12.5px;margin-bottom:20px;line-height:1.5}
+.field{display:grid;gap:5px;margin-bottom:12px}
+.field label{font-size:11.5px;color:var(--dim);font-weight:500}
+.field input{background:var(--wash);border:1px solid var(--line);border-radius:9px;
+  padding:10px 12px;color:var(--ink);font:inherit;font-size:14px;width:100%}
+.field input:focus{outline:none;border-color:var(--accent);background:var(--paper)}
+.field input:disabled{opacity:.55}
+.go{width:100%;min-height:38px;background:var(--accent);color:var(--accent-ink);border:0;
+  border-radius:9px;font:600 14px ui-sans-serif,system-ui,sans-serif;cursor:pointer;
+  margin-top:6px}
+.go:hover:not(:disabled){background:var(--accent-dark)}
+.go:disabled{opacity:.6;cursor:default}
+.err{background:color-mix(in oklab,var(--bad) 10%,var(--paper));
+  border:1px solid color-mix(in oklab,var(--bad) 38%,var(--line));color:var(--bad);
+  font-size:12px;border-radius:9px;padding:9px 11px;margin-bottom:12px;line-height:1.45}
+.fine{color:var(--faint);font-size:11px;margin-top:16px;padding-top:14px;
+  border-top:1px solid var(--line2);line-height:1.5}
+
+/* ---------- viewer lock ---------- */
+body.locked{user-select:none;-webkit-user-select:none}
+body.locked input{user-select:text;-webkit-user-select:text}
+body.locked img{-webkit-user-drag:none;pointer-events:none}
+
+/* ---------- builder frame ---------- */
+/* A builder is an interactive tool, not a snippet. Copying 40 KB of its markup was
+   never the useful interaction -- opening it, choosing options and copying what it
+   generates is. It still arrives through get_source(), so it is gated and logged
+   exactly like a component; it just runs instead of landing on the clipboard. */
+#run{position:fixed;inset:0;z-index:120;display:none;background:var(--wash);
+  grid-template-rows:auto 1fr}
+#run.open{display:grid}
+.run-top{display:flex;align-items:center;gap:12px;padding:11px 16px;
+  border-bottom:1px solid var(--line);background:var(--paper)}
+.run-top h2{font-size:14.5px;letter-spacing:-.01em;flex:1;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.run-top .hint{font-size:11.5px;color:var(--faint);flex:none}
+#runFrame{width:100%;height:100%;border:0;background:var(--paper);display:block}
+.run-load{display:grid;place-items:center;color:var(--faint);font-size:13px}
+
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);
+  background:var(--ink);color:var(--paper);border-radius:10px;padding:10px 15px;
+  font-size:12.5px;z-index:200;opacity:0;pointer-events:none;
+  transition:opacity .2s var(--out),transform .2s var(--out);
+  box-shadow:0 12px 36px -12px rgba(0,0,0,.5);max-width:min(92vw,400px);line-height:1.45}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  .card:hover{transform:none}
+}
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="brand">
+    <i><svg viewBox="0 0 32 32"><path d="M9 20l5-9 4 6 2-3 3 6z"/></svg></i>
+    <div><b>SoloLeveling</b><span>Component library</span></div>
+  </div>
+
+  <label class="find" for="q">
+    <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14"/></svg>
+    <input id="q" type="search" placeholder="Search 969" autocomplete="off" spellcheck="false">
+    <kbd>/</kbd>
+  </label>
+
+  <nav id="nav"></nav>
+
+  <div class="tally" id="tally"></div>
+  <div class="acct">
+    <span class="em" id="meEmail"></span>
+    <span class="role" id="meRole"></span>
+    <button class="role" id="signout" type="button" style="cursor:pointer">Out</button>
+  </div>
+</aside>
+
+<main>
+  <div class="head">
+    <h1 id="secName">All<em id="secCount"></em></h1>
+    <div class="tools">
+      <button class="btn" id="theme" type="button" title="Switch theme"></button>
+    </div>
+  </div>
+  <p class="sub" id="secDesc"></p>
+
+  <section id="admin" hidden>
+    <h2>Who has been in</h2>
+    <div id="visitors"></div>
+  </section>
+
+  <div class="grid" id="grid"></div>
+</main>
+
+<!-- login sits above everything, so there is no app shell to reveal by removing it -->
+<div id="gate">
+  <form class="sheet" id="loginForm">
+    <div class="brand">
+      <i><svg viewBox="0 0 32 32"><path d="M9 20l5-9 4 6 2-3 3 6z"/></svg></i>
+      <div><b>SoloLeveling</b><span>Component library</span></div>
+    </div>
+    <h1>Sign in</h1>
+    <p class="lede">969 components, motion cards and builders.</p>
+
+    <div class="err" id="loginErr" hidden></div>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" required autofocus spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="go" id="loginBtn" type="submit">Sign in</button>
+
+    <p class="fine">Access is by invitation. Accounts are issued by the studio — there
+      is no public sign-up, and every session is recorded against the account that
+      opened it.</p>
+  </form>
+</div>
+
+<div id="run">
+  <div class="run-top">
+    <h2 id="runName"></h2>
+    <span class="hint" id="runHint"></span>
+    <button class="btn" id="runClose" type="button">Close</button>
+  </div>
+  <div class="run-load" id="runLoad">Loading the builder…</div>
+  <iframe id="runFrame" title="Builder" allow="clipboard-write" hidden></iframe>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g,
+  c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const sb = createClient(window.PORTAL.SUPABASE_URL, window.PORTAL.SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true },
+});
+
+let me = null, items = [], shown = [], lib = "all", sec = null;
+const THUMB = {};
+const LIMIT = 120;
+const LIBNAME = { db: "Component DB", builders: "Builders", motion: "Motion" };
+const LIBDESC = {
+  all: "Everything in the library. Ours to ship, and the motion set under its own licence.",
+  db: "Components we wrote. Free to ship, no attribution owed.",
+  builders: "Interactive builders — open one to generate and copy a section.",
+  motion: "Motion cards under the BrewedOps free licence: usable in client work, no attribution.",
+};
+
+// ---------------------------------------------------------------- theme ----
+// Every read and write is guarded: localStorage throws in a private window and in
+// some embedded views, and a theme preference is never worth a blank page.
+function setTheme(t) {
+  if (t) document.documentElement.setAttribute("data-theme", t);
+  else document.documentElement.removeAttribute("data-theme");
+  const dark = (document.documentElement.getAttribute("data-theme") || "") === "dark"
+    || (!document.documentElement.hasAttribute("data-theme")
+        && matchMedia("(prefers-color-scheme: dark)").matches);
+  $("theme").innerHTML = dark
+    ? `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M2.6 12h2.3M19.1 12h2.3M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/></svg>Light`
+    : `<svg viewBox="0 0 24 24"><path d="M20.5 14.2A8.5 8.5 0 019.8 3.5a8.5 8.5 0 1010.7 10.7z"/></svg>Dark`;
+  try { localStorage.setItem("sl-theme", t || ""); } catch {}
+}
+try {
+  const saved = localStorage.getItem("sl-theme");
+  if (saved) document.documentElement.setAttribute("data-theme", saved);
+} catch {}
+setTheme(document.documentElement.getAttribute("data-theme"));
+
+$("theme").addEventListener("click", () => {
+  const nowDark = (document.documentElement.getAttribute("data-theme") || "") === "dark"
+    || (!document.documentElement.hasAttribute("data-theme")
+        && matchMedia("(prefers-color-scheme: dark)").matches);
+  setTheme(nowDark ? "light" : "dark");
+});
+
+// ---------------------------------------------------------------- toast ----
+let toastT = null;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove("on"), 2600);
+}
+
+// ---------------------------------------------------------- viewer lock ----
+// Requested deliberately, and applied to viewers only -- admins work unrestricted.
+//
+// Be clear-eyed about what this is: friction, not protection. Anyone determined
+// reads the page from the network tab, a saved copy or curl, and no front-end code
+// can prevent that. It is worth having because it turns the casual path into an
+// explicit refusal.
+//
+// What it is NOT doing is protecting the components. View-source on this page shows
+// the shell, the anon key, and no component code at all -- components arrive from
+// the API one at a time, logged. That gate is what actually holds, and it is
+// verified by probe rather than asserted here.
+function lockViewer() {
+  document.body.classList.add("locked");
+  const stop = (e, why) => { e.preventDefault(); e.stopPropagation(); if (why) toast(why); return false; };
+
+  document.addEventListener("contextmenu", (e) =>
+    stop(e, "Right-click is disabled on this account. Use Copy code or Copy prompt."));
+  document.addEventListener("dragstart", (e) => stop(e));
+  document.addEventListener("keydown", (e) => {
+    const k = (e.key || "").toLowerCase(), mod = e.ctrlKey || e.metaKey;
+    if (e.key === "F12") return stop(e, "Developer tools are disabled on this account.");
+    if (mod && e.shiftKey && ["i", "j", "c"].includes(k))
+      return stop(e, "Developer tools are disabled on this account.");
+    if (mod && !e.shiftKey && k === "u") return stop(e, "View source is disabled on this account.");
+    if (mod && !e.shiftKey && k === "s") return stop(e, "Saving the page is disabled. Use Copy code.");
+    if (mod && !e.shiftKey && k === "p") return stop(e, "Printing is disabled on this account.");
+    if (mod && k === "a" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return stop(e);
+  }, true);
+}
+
+// ---------------------------------------------------------------- login ----
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("loginBtn"), err = $("loginErr");
+  err.hidden = true;
+  btn.disabled = true; btn.textContent = "Signing in…";
+  $("email").disabled = $("pw").disabled = true;
+
+  const { error } = await sb.auth.signInWithPassword({
+    email: $("email").value.trim(), password: $("pw").value,
+  });
+
+  if (error) {
+    // Supabase returns the same "Invalid login credentials" for a wrong password
+    // and for an address with no account. Kept as-is: a distinct "no such user"
+    // would turn this form into an account checker.
+    err.textContent = /invalid login/i.test(error.message)
+      ? "That email and password do not match an account." : error.message;
+    err.hidden = false;
+    btn.disabled = false; btn.textContent = "Sign in";
+    $("email").disabled = $("pw").disabled = false;
+    $("pw").select();
+    return;
+  }
+  await start();
+});
+
+$("signout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+
+// ----------------------------------------------------------------- boot ----
+async function start() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { $("gate").hidden = false; return; }
+
+  // The role comes from the database, never from anything the client could set.
+  const { data: prof } = await sb.from("profiles")
+    .select("email, role").eq("id", session.user.id).single();
+  me = prof || { email: session.user.email, role: "viewer" };
+
+  $("meEmail").textContent = me.email;
+  $("meRole").textContent = me.role;
+  $("meRole").classList.toggle("admin", me.role === "admin");
+  $("gate").hidden = true;
+  if (me.role !== "admin") lockViewer();
+
+  // rpc() returns a thenable, not a Promise -- it has .then() and no .catch(), so
+  // chaining .catch() threw a TypeError that killed start() before the catalogue
+  // loaded. Promise.resolve wraps it into a real Promise.
+  Promise.resolve(sb.rpc("record_visit", { agent: navigator.userAgent.slice(0, 300) }))
+    .catch(() => {});
+
+  await loadCatalogue();
+  if (me.role === "admin") loadVisitors();
+}
+
+async function loadCatalogue() {
+  $("grid").innerHTML = `<div class="empty">Loading…</div>`;
+  const { data, error } = await sb.from("components")
+    .select("id,library,name,section,descr,deps,ship,licence,preview_html,thumb,has_source,has_prompt")
+    .order("library").order("section").limit(2000);
+
+  if (error) {
+    $("grid").innerHTML = `<div class="empty">Could not load the catalogue.<br>${esc(error.message)}</div>`;
+    return;
+  }
+  // Order by library ALPHABETICALLY put builders first, so "All" opened on 27
+  // cards whose wells are placeholders -- the worst 27 of the 969 to lead with.
+  // Lead with what has a real preview instead.
+  const RANK = { db: 0, motion: 1, builders: 2 };
+  items = (data || []).sort((a, b) =>
+    (RANK[a.library] ?? 9) - (RANK[b.library] ?? 9) ||
+    (a.section || "").localeCompare(b.section || "") ||
+    a.name.localeCompare(b.name));
+  buildNav();
+  render();
+  signThumbs();
+}
+
+// The thumbs bucket is private, so each path needs signing for this session. A
+// public bucket would be one line less and would serve 716 screenshots of
+// BrewedOps' work to anyone holding a URL, which their licence does not cover.
+async function signThumbs() {
+  const paths = [...new Set(items.filter(i => i.thumb).map(i => i.thumb))];
+  if (!paths.length) return;
+  for (let i = 0; i < paths.length; i += 250) {
+    const { data, error } = await sb.storage.from("thumbs")
+      .createSignedUrls(paths.slice(i, i + 250), 3600);
+    if (error) continue;
+    (data || []).forEach(r => { if (r.signedUrl) THUMB[r.path] = r.signedUrl; });
+  }
+  render();
+}
+
+// ------------------------------------------------------------------ nav ----
+function buildNav() {
+  const byLib = items.reduce((a, i) => (a[i.library] = (a[i.library] || 0) + 1, a), {});
+  let html = `<div class="grp">Libraries</div>` +
+    [["all", "All", items.length]]
+      .concat(Object.keys(byLib).sort().map(k => [k, LIBNAME[k] || k, byLib[k]]))
+      .map(([k, label, n]) =>
+        `<button class="nav" data-lib="${k}" aria-current="${k === lib && !sec}">
+           <span>${esc(label)}</span><b>${n}</b></button>`).join("");
+
+  const pool = lib === "all" ? items : items.filter(i => i.library === lib);
+  const bySec = pool.reduce((a, i) => (a[i.section || "—"] = (a[i.section || "—"] || 0) + 1, a), {});
+  const secs = Object.keys(bySec).sort((a, b) => bySec[b] - bySec[a]);
+  if (secs.length > 1) {
+    html += `<div class="grp">Sections</div>` + secs.map(s =>
+      `<button class="nav" data-sec="${esc(s)}" aria-current="${s === sec}">
+         <span>${esc(s)}</span><b>${bySec[s]}</b></button>`).join("");
+  }
+  $("nav").innerHTML = html;
+
+  const ours = items.filter(i => i.ship === "yes").length;
+  $("tally").innerHTML =
+    `<b>${items.length}</b> components in <b>${Object.keys(bySec).length}</b> sections<br>
+     ${ours} ours, free to ship. ${items.length - ours} under the motion licence.`;
+}
+
+$("nav").addEventListener("click", (e) => {
+  const b = e.target.closest(".nav");
+  if (!b) return;
+  if (b.dataset.lib !== undefined) { lib = b.dataset.lib; sec = null; }
+  else { sec = b.dataset.sec === sec ? null : b.dataset.sec; }
+  buildNav();
+  render();
+});
+$("q").addEventListener("input", render);
+
+addEventListener("keydown", (e) => {
+  if (e.key === "/" && document.activeElement !== $("q")) { e.preventDefault(); $("q").focus(); }
+  else if (e.key === "Escape" && $("q").value) { $("q").value = ""; render(); }
+});
+
+// ----------------------------------------------------------------- grid ----
+const ICON_PROMPT = `<svg viewBox="0 0 16 16"><path d="M4 2h6l3 3v9H4z"/><path d="M6 7h5M6 10h5"/></svg>`;
+const ICON_CODE   = `<svg viewBox="0 0 16 16"><path d="M6 4L2 8l4 4M10 4l4 4-4 4"/></svg>`;
+const ICON_OPEN   = `<svg viewBox="0 0 16 16"><path d="M6.5 2.5H2.5v11h11v-4"/><path d="M9.5 2.5h4v4M13.5 2.5L7 9"/></svg>`;
+
+function card(i) {
+  // A captured loop beats a hand-drawn sketch, which is why thumb now comes first.
+  // The DB's sketches were abstract grey skeletons -- they showed the SHAPE of a
+  // component and nothing about what it actually looks like or does, so a nav and a
+  // pricing table read as the same four grey bars. The sketch stays as the fallback
+  // for anything with no capture yet, because an abstract shape still beats a name
+  // on a blank panel.
+  //
+  // Either way the code stays on the server: a looping picture of a component is not
+  // the component.
+  const well = i.thumb && THUMB[i.thumb]
+    ? `<img class="in" loading="lazy" decoding="async" alt="" src="${esc(THUMB[i.thumb])}">`
+    : i.preview_html
+      ? `<div class="sketch">${i.preview_html}</div>`
+      : `<div class="ph">${esc(i.name)}</div>`;
+
+  const tags = (i.deps || []).map(d =>
+    `<span class="lib ${esc(d)}">${esc(d)}</span>`).join("");
+
+  // has_prompt is separate from has_source because the 27 builders have code and no
+  // prompt file -- offering them a Copy prompt button offered one that could only fail.
+  // A builder opens and runs; everything else lands on the clipboard. Both go
+  // through get_source(), so both are gated and logged the same way.
+  const acts = i.library === "builders"
+    ? `<button class="bc" data-act="open" data-id="${esc(i.id)}" data-name="${esc(i.name)}">${ICON_OPEN}Open builder</button>`
+    : (i.has_prompt ? `<button class="bp" data-act="prompt" data-id="${esc(i.id)}">${ICON_PROMPT}Copy prompt</button>` : "") +
+      (i.has_source ? `<button class="bc" data-act="code" data-id="${esc(i.id)}">${ICON_CODE}Copy code</button>` : "");
+
+  // The grid is stills, so nothing in it moves -- and half this library is motion,
+  // where the movement IS the component. Clicking a well plays that one live.
+  const PLAY = `<span class="play"><svg viewBox="0 0 16 16"><path d="M5 3.5l8 4.5-8 4.5z"/></svg>Play</span>`;
+  return `<article class="card">
+    <div class="well" data-act="preview" data-id="${esc(i.id)}" data-name="${esc(i.name)}"
+         role="button" tabindex="0" aria-label="Play ${esc(i.name)}">${well}${i.has_source ? PLAY : ""}</div>
+    <div class="meta">
+      <h3>${esc(i.name)}${tags}</h3>
+      <p>${esc(i.descr || i.section || "")}</p>
+    </div>
+    <div class="acts">${acts}</div>
+    <div class="licence ${i.ship === "cond" ? "cond" : ""}">
+      <span class="dot"></span><span>${esc(i.licence || "")}</span></div>
+  </article>`;
+}
+
+function render() {
+  const q = $("q").value.trim().toLowerCase();
+  shown = items.filter(i =>
+    (lib === "all" || i.library === lib) &&
+    (!sec || (i.section || "—") === sec) &&
+    (!q || (i.name + " " + (i.section || "") + " " + (i.descr || "")).toLowerCase().includes(q)));
+
+  $("secName").firstChild.textContent = q ? "Search" : sec ? sec : (LIBNAME[lib] || "All");
+  $("secCount").textContent = shown.length;
+  $("secDesc").textContent = q ? `Matching “${q}”.` : (LIBDESC[lib] || "");
+
+  // An empty catalogue and a search with no hits are different problems, and they
+  // looked identical here -- which cost a round trip the first time this was opened
+  // before the import had run.
+  $("grid").innerHTML =
+    shown.length  ? shown.slice(0, LIMIT).map(card).join("") +
+                    (shown.length > LIMIT ? `<p class="more">${shown.length - LIMIT} more — narrow the search</p>` : "")
+  : !items.length ? `<div class="empty"><b>No components yet.</b><br>
+      The catalogue is empty — the import has not been run against this project.</div>`
+  :                 `<div class="empty">Nothing matches. Try <b>hero</b>, <b>pricing</b> or <b>marquee</b>.</div>`;
+}
+
+// -------------------------------------------------------------- copying ----
+$("grid").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const w = e.target.closest('.well[data-act="preview"]');
+  if (w) { e.preventDefault(); w.click(); }
+});
+
+$("grid").addEventListener("click", async (e) => {
+  const w = e.target.closest('.well[data-act="preview"]');
+  if (w && w.dataset.id) { await playLive(w.dataset.id, w.dataset.name); return; }
+  const b = e.target.closest("button[data-act]");
+  if (!b) return;
+  const kind = b.dataset.act, id = b.dataset.id, html = b.innerHTML;
+
+  if (kind === "open") { await openBuilder(id, b.dataset.name, b, html); return; }
+
+  b.disabled = true; b.textContent = "…";
+
+  // One component per call. The server logs it and counts it against the hourly
+  // ceiling before returning anything -- which is the whole gate.
+  const { data, error } = await sb.rpc("get_source", { cid: id, kind });
+
+  if (error) {
+    b.classList.add("bad");
+    b.textContent = /limit/i.test(error.message) ? "Hourly limit" : "Failed";
+    if (/limit/i.test(error.message)) toast("Hourly copy limit reached — try again later.");
+  } else {
+    try { await navigator.clipboard.writeText(data); b.classList.add("ok"); b.textContent = "Copied"; }
+    catch { window.prompt("Copy this:", data); b.innerHTML = html; }
+  }
+  setTimeout(() => { b.classList.remove("ok", "bad"); b.innerHTML = html; b.disabled = false; }, 1700);
+});
+
+// -------------------------------------------------------------- builder ----
+async function openBuilder(id, name, btn, html) {
+  btn.disabled = true; btn.textContent = "Opening…";
+  // get_preview, not get_source: opening a builder is looking, not taking, and
+  // charging it to the copy ceiling meant a session that had copied its 150 could
+  // no longer even open one. The taking happens inside the builder, with its own
+  // Copy code button -- which generates a section client-side rather than reading
+  // a stored snippet, so it is not a get_source call at all.
+  const { data, error } = await sb.rpc("get_preview", { cid: id });
+  btn.disabled = false; btn.innerHTML = html;
+
+  if (error) {
+    toast(/limit/i.test(error.message)
+      ? "Hourly limit reached — try again later."
+      : "Could not open that builder.");
+    return;
+  }
+  $("runName").textContent = name || id;
+  $("runHint").textContent = "Use its own Copy code button to take a section";
+  $("runLoad").hidden = false;
+  $("runLoad").textContent = "Loading the builder…";
+  $("runFrame").hidden = true;
+  $("run").classList.add("open");
+
+  // srcdoc rather than a blob URL: a builder is a single self-contained file with
+  // its CSS and JS inline, so it needs nothing fetched relative to a document URL.
+  // No sandbox attribute, because the builders' own Copy code buttons need the
+  // clipboard -- and this is our code, served to an account we issued.
+  const f = $("runFrame");
+  f.onload = () => { $("runLoad").hidden = true; f.hidden = false; };
+  f.srcdoc = data;
+}
+
+// Previews go through get_preview, not get_source. Both hand over the same bytes,
+// but only a copy should count against the copy ceiling -- someone who hit the limit
+// by LOOKING would reasonably conclude the tool was broken.
+async function playLive(id, name) {
+  $("runName").textContent = name || id;
+  $("runHint").textContent = "Live preview";
+  $("runLoad").hidden = false;
+  $("runLoad").textContent = "Loading…";
+  $("runFrame").hidden = true;
+  $("run").classList.add("open");
+
+  const { data, error } = await sb.rpc("get_preview", { cid: id });
+  if (error) {
+    $("runLoad").textContent = /limit/i.test(error.message)
+      ? "Hourly preview limit reached — try again later."
+      : "Could not load that preview.";
+    return;
+  }
+  const f = $("runFrame");
+  f.onload = () => { $("runLoad").hidden = true; f.hidden = false; };
+  f.srcdoc = data;
+}
+
+function closeBuilder() {
+  $("run").classList.remove("open");
+  // Drop the document so its timers, rAF loops and audio stop. Leaving it parked
+  // keeps a builder's animation running behind the grid for the rest of the session.
+  $("runFrame").srcdoc = "";
+  $("runFrame").hidden = true;
+}
+$("runClose").addEventListener("click", closeBuilder);
+addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("run").classList.contains("open")) closeBuilder();
+});
+
+// ---------------------------------------------------------------- admin ----
+async function loadVisitors() {
+  const { data, error } = await sb.from("visitors").select("*");
+  if (error || !data) return;
+  $("admin").hidden = false;
+  const when = (t) => t ? new Date(t).toLocaleString() : "never";
+  $("visitors").innerHTML = `<table><thead><tr>
+      <th>Account</th><th>Role</th><th>Last seen</th><th>Visits</th><th>Copies</th><th>Previews</th>
+    </tr></thead><tbody>` + data.map(v => `<tr>
+      <td class="k">${esc(v.email)}</td><td>${esc(v.role)}</td>
+      <td>${esc(when(v.last_seen))}</td><td>${v.visit_count}</td><td>${v.copies}</td><td>${v.previews ?? 0}</td>
+    </tr>`).join("") + `</tbody></table>`;
+}
+
+start();
+</script>
+</body>
+</html>
