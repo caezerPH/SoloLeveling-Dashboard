@@ -82,17 +82,28 @@ curl -s -X POST "$URL/rest/v1/rpc/get_source" -H "apikey: $ANON" \
      -H 'Content-Type: application/json' -d '{"cid":"x","kind":"code"}'          # 401
 ```
 
-## Licensing
+## Licensing and attribution
 
-The portal code in this repository is ours. The catalogue it serves is not uniformly
-so, and the `licence` and `origin` columns carry that per component rather than
-burying it in a footer:
+**Full notices: [NOTICE.md](NOTICE.md). This repository's own code: [LICENSE](LICENSE), MIT.**
 
-- **Component DB (226)** and **Studio builders (27)** — written in-house. Free to
-  ship, no attribution owed.
-- **Motion (716)** — mirrored from the BrewedOps motion library under its free
-  licence: usable in client work and commercial products with no attribution. That
-  licence permits *use* and forbids *republishing the collection as your own*, which
-  is why provenance is stored per row and surfaced in the UI.
+Most of what this portal serves was made by other people. **No ownership or copyright
+is claimed over any of it** — credit belongs to each author, and `NOTICE.md` names
+every one with its licence and a link to the authoritative text.
 
-No component is served without its licence line attached.
+The short version:
+
+| | |
+|---|---|
+| **Component DB** (226) and **Builders** (27) | Written in-house. The only items this project has a claim over |
+| **Motion** (716) | BrewedOps Motion Library, under its own free licence — commercial and client use permitted, no attribution required. Credited anyway, because the work is theirs |
+| **three.js** `0.186.1`, **Lenis** `1.3.26`, **supabase-js** `2.45.4` | MIT, each to its own authors |
+| **GSAP** `3.15.0` | GreenSock standard licence. Free on a site or app; **not** inside a no-code animation builder, which is why the builders here use no GSAP |
+| **Geist** / **Geist Mono** | SIL OFL 1.1, © Vercel |
+
+Provenance is stored per component in the database — `licence` and `origin` columns —
+rather than buried in a footer, so nothing is served without it.
+
+The BrewedOps licence permits *use* and forbids *republishing the collection as your
+own*. This portal serves those cards as a working set alongside in-house components,
+with their origin recorded per row; it is not a rebadged copy of that library, and
+the BrewedOps name and logo are not used as branding here.
